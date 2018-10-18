@@ -1196,9 +1196,7 @@ void ProcessHttpRequest(InputMessageBase *msg) {
             return SendHttpResponse(cntl.release(), server, method_status, msg->received_us());
         }
     } else if (security_mode) {
-        cntl->SetFailed(EPERM, "Not allowed to access builtin services, try "
-                        "ServerOptions.internal_port=%d instead if you're in"
-                        " internal network", server->options().internal_port);
+        cntl->SetFailed(EPERM, "Not allowed to access builtin services");
         return SendHttpResponse(cntl.release(), server, method_status, msg->received_us());
     }
     

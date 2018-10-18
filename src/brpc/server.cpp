@@ -136,7 +136,7 @@ ServerOptions::ServerOptions()
     , bthread_init_args(NULL)
     , bthread_init_count(0)
     , internal_port(-1) 
-    , has_builtin_services(true)
+    , has_builtin_services(false)
     , http_master_service(NULL)
     , health_reporter(NULL)
     , rtmp_service(NULL) {
@@ -712,6 +712,9 @@ int Server::StartInternal(const butil::ip_t& ip,
     }
     if (opt) {
         _options = *opt;
+        if (_options.internal_port >= 0) {
+            _options.has_builtin_services = true;
+        }
     } else {
         // Always reset to default options explicitly since `_options'
         // may be the options for the last run or even bad options
