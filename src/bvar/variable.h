@@ -21,6 +21,7 @@
 #include <ostream>                     // std::ostream
 #include <string>                      // std::string
 #include <vector>                      // std::vector
+#include <unordered_map>               // std::unordered_map
 #include <gflags/gflags_declare.h>
 #include "butil/macros.h"               // DISALLOW_COPY_AND_ASSIGN
 #include "butil/strings/string_piece.h" // butil::StringPiece
@@ -51,6 +52,12 @@ public:
     virtual ~Dumper() { }
     virtual bool dump(const std::string& name,
                       const butil::StringPiece& description) = 0;
+
+    virtual bool dump(const std::string& name,
+                      const butil::StringPiece& description,
+                      const std::unordered_map<std::string, std::string>& tags) {
+        return false;
+    }
 };
 
 // Options for Variable::dump_exposed().
@@ -151,6 +158,30 @@ public:
         return expose_impl(prefix, name, display_filter);
     }
 
+    // Set tag for this variable
+    // If key or value is empry, mark as failed;
+    //
+    // Returns 0 on success, -1 otherwise.
+    int set_tag(const std::string& key, const std::string& value) {
+        if (key.empty() || value.empty()) {
+            return -1;
+        }
+        _tags[key] = value;
+        return 0;
+    }
+
+    // Set tags for this variable
+    // Returns 0 on sucess, -1 otherwise.
+    int set_tags(const std::unordered_map<std::string, std::string>& tags) {
+        for (const auto& tag : tags) {
+            if (tag.first.empty() || tag.second.empty()) {
+                return -1;
+            }
+            _tags[tag.first] = tag.second;
+        }
+        return 0;
+    }
+
     // Hide this variable so that it's not counted in *_exposed functions.
     // Returns false if this variable is already hidden.
     // CAUTION!! Subclasses must call hide() manually to avoid displaying
@@ -210,6 +241,7 @@ protected:
 
 private:
     std::string _name;
+    std::unordered_map<std::string, std::string> _tags;
 
     // bvar uses TLS, thus copying/assignment need to copy TLS stuff as well,
     // which is heavy. We disable copying/assignment now.

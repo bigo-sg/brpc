@@ -49,12 +49,18 @@ public:
 
     bool dump(const std::string& name, const butil::StringPiece& desc) override;
 
+    bool dump(const std::string& name, const butil::StringPiece& desc,
+            const std::unordered_map<std::string, std::string>& tag) override;
+
 private:
     DISALLOW_COPY_AND_ASSIGN(PrometheusMetricsDumper);
 
     // Return true iff name ends with suffix output by LatencyRecorder.
     bool DumpLatencyRecorderSuffix(const butil::StringPiece& name,
                                    const butil::StringPiece& desc);
+
+    bool DumpRecorderWithTags(const butil::StringPiece& name,
+                              const butil::StringPiece& desc);
 
     // 6 is the number of bvars in LatencyRecorder that indicating percentiles
     static const int NPERCENTILES = 6;
@@ -85,6 +91,27 @@ bool PrometheusMetricsDumper::dump(const std::string& name,
     if (DumpLatencyRecorderSuffix(name, desc)) {
         // Has encountered name with suffix exposed by LatencyRecorder,
         // Leave it to DumpLatencyRecorderSuffix to output Summary.
+        return true;
+    }
+    *_os << "# HELP " << name << '\n'
+         << "# TYPE " << name << " gauge" << '\n'
+         << name << " " << desc << '\n';
+    return true;
+}
+
+bool PrometheusMetricsDumper::dump(const std::string& name,
+                                   const butil::StringPiece& desc,
+                                   const std::unoreder_map<std::string, std::string>& tags) {
+    if (!desc.empty() && desc[0] == '"') {
+        // there is no necessary to monitor string in prometheus
+        return true;
+    }
+    if (DumpLatencyRecorderSuffix(name, desc)) {
+        // Has encountered name with suffix exposed by LatencyRecorder,
+        // Leave it to DumpLatencyRecorderSuffix to output Summary.
+        return true;
+    }
+    if (DumpRecorderWithTags(name, desc, tags)) {
         return true;
     }
     *_os << "# HELP " << name << '\n'
@@ -135,9 +162,10 @@ PrometheusMetricsDumper::ProcessLatencyRecorderSuffix(const butil::StringPiece& 
     return NULL;
 }
 
-bool PrometheusMetricsDumper::DumpLatencyRecorderSuffix(
+bool PrometheusMetricsDumper::DumpRecorderWithTags(
     const butil::StringPiece& name,
-    const butil::StringPiece& desc) {
+    const butil::StringPiece& desc,
+    const std::unoreder_map<std::string, std::string>& tags) {
     if (!name.starts_with(_server_prefix)) {
         return false;
     }
@@ -150,6 +178,25 @@ bool PrometheusMetricsDumper::DumpLatencyRecorderSuffix(
     }
     *_os << "# HELP " << si->metric_name << '\n'
          << "# TYPE " << si->metric_name << " summary\n"
+         << "name{";
+    for (const auto iter = tags->begin(); iter != tags.end(); ++iter) {
+        if (iter == tags->begin()) {
+            *_os << iter->first << "=\"" << iter->second << "\"";
+        } else {
+            *_os << "," << iter->first << "=\"" << iter->second << "\"";
+        }
+    }
+    return true;
+}
+
+bool PrometheusMetricsDumper::DumpLatencyRecorderSuffix(
+    const butil::StringPiece& name,
+    const butil::StringPiece& desc) {
+    if (tags.empty()) {
+        return false;
+    }
+    *_os << "# HELP " << name << '\n'
+         << "# TYPE " << name << " gauge\n"
          << si->metric_name << "{quantile=\""
          << (double)(bvar::FLAGS_bvar_latency_p1) / 100 << "\"} "
          << si->latency_percentiles[0] << '\n'
@@ -173,6 +220,7 @@ bool PrometheusMetricsDumper::DumpLatencyRecorderSuffix(
          << si->metric_name << "_count " << si->count << '\n';
     return true;
 }
+
 
 void PrometheusMetricsService::default_method(::google::protobuf::RpcController* cntl_base,
                                               const ::brpc::MetricsRequest*,

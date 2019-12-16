@@ -493,7 +493,10 @@ int Variable::dump_exposed(Dumper* dumper, const DumpOptions* poptions) {
                 if (log_dummped) {
                     dumpped_info << '\n' << name << ": " << streambuf.data();
                 }
-                if (!dumper->dump(name, streambuf.data())) {
+                if (_tags.empty() && !dumper->dump(name, streambuf.data())) {
+                    return -1;
+                }
+                if (!_tags.empty() && !dumper->dump(name, streambuf.data(), _tags)) {
                     return -1;
                 }
                 streambuf.reset();
