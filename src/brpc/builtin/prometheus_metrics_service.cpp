@@ -170,8 +170,8 @@ bool PrometheusMetricsDumper::DumpRecorderWithTags(
     if (tags.empty()) {
         return false;
     }
-    *_os << "# HELP " << si->metric_name << '\n'
-         << "# TYPE " << si->metric_name << " summary\n"
+    *_os << "# HELP " << name << '\n'
+         << "# TYPE " << name << " gauge\n"
          << "name{";
     for (const auto iter = tags->begin(); iter != tags.end(); ++iter) {
         if (iter == tags->begin()) {
@@ -196,8 +196,8 @@ bool PrometheusMetricsDumper::DumpLatencyRecorderSuffix(
     if (!si->IsComplete()) {
         return true;
     }
-    *_os << "# HELP " << name << '\n'
-         << "# TYPE " << name << " gauge\n"
+    *_os << "# HELP " << si->metric_name << '\n'
+         << "# TYPE " << si->metric_name << " summary\n"
          << si->metric_name << "{quantile=\""
          << (double)(bvar::FLAGS_bvar_latency_p1) / 100 << "\"} "
          << si->latency_percentiles[0] << '\n'
