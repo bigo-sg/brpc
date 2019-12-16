@@ -50,7 +50,7 @@ public:
     bool dump(const std::string& name, const butil::StringPiece& desc) override;
 
     bool dump(const std::string& name, const butil::StringPiece& desc,
-            const std::unordered_map<std::string, std::string>& tag) override;
+            const std::unordered_map<std::string, std::string>& tags) override;
 
 private:
     DISALLOW_COPY_AND_ASSIGN(PrometheusMetricsDumper);
@@ -60,7 +60,8 @@ private:
                                    const butil::StringPiece& desc);
 
     bool DumpRecorderWithTags(const butil::StringPiece& name,
-                              const butil::StringPiece& desc);
+                              const butil::StringPiece& desc,
+                              const std:::unordered_map<std::string, std::string>& tags);
 
     // 6 is the number of bvars in LatencyRecorder that indicating percentiles
     static const int NPERCENTILES = 6;
@@ -166,15 +167,8 @@ bool PrometheusMetricsDumper::DumpRecorderWithTags(
     const butil::StringPiece& name,
     const butil::StringPiece& desc,
     const std::unoreder_map<std::string, std::string>& tags) {
-    if (!name.starts_with(_server_prefix)) {
+    if (tags.empty()) {
         return false;
-    }
-    const SummaryItems* si = ProcessLatencyRecorderSuffix(name, desc);
-    if (!si) {
-        return false;
-    }
-    if (!si->IsComplete()) {
-        return true;
     }
     *_os << "# HELP " << si->metric_name << '\n'
          << "# TYPE " << si->metric_name << " summary\n"
@@ -192,8 +186,15 @@ bool PrometheusMetricsDumper::DumpRecorderWithTags(
 bool PrometheusMetricsDumper::DumpLatencyRecorderSuffix(
     const butil::StringPiece& name,
     const butil::StringPiece& desc) {
-    if (tags.empty()) {
+    if (!name.starts_with(_server_prefix)) {
         return false;
+    }
+    const SummaryItems* si = ProcessLatencyRecorderSuffix(name, desc);
+    if (!si) {
+        return false;
+    }
+    if (!si->IsComplete()) {
+        return true;
     }
     *_os << "# HELP " << name << '\n'
          << "# TYPE " << name << " gauge\n"
