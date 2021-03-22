@@ -361,6 +361,24 @@ else
 fi
 append_to_output "endif"
 
+append_to_output "ifeq (\$(USE_JEMALLOC), 1)"
+JEMALLOC_LIB=$(find_dir_of_lib jemalloc)
+if [ -z "$JEMALLOC_LIB" ]; then
+    append_to_output "    \$(error \"Fail to find jemalloc\")"
+else
+    append_to_output_libs "$JEMALLOC_LIB" "    "
+    if [ -f $JEMALLOC_LIB/libjemalloc.$SO ]; then
+        append_to_output "    DYNAMIC_LINKINGS+=-ljemalloc"
+    else
+        if [ "$SYSTEM" = "Darwin" ]; then
+            append_to_output "    STATIC_LINKINGS+=$JEMALLOC_LIB/libjemalloc.a"
+        else
+            append_to_output "    STATIC_LINKINGS+=-ljemalloc"
+        fi
+    fi
+fi
+append_to_output "endif"
+
 if [ $WITH_GLOG != 0 ]; then
     GLOG_LIB=$(find_dir_of_lib_or_die glog)
     GLOG_HDR=$(find_dir_of_header_or_die glog/logging.h windows/glog/logging.h)
