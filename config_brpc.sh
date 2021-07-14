@@ -400,6 +400,7 @@ else
             append_to_output "    STATIC_LINKINGS+=$JEMALLOC_LIB/libjemalloc.a"
         else
             append_to_output "    STATIC_LINKINGS+=-ljemalloc"
+            append_to_output "    STATIC_LINKINGS+=-lprofiler"
         fi
     fi
 fi
